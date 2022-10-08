@@ -1,4 +1,4 @@
-GET http://localhost:3000/todos/?priority=HIGH
+GET http://localhost:3000/todos/?priority=HIGH&status=IN%20PROGRESS
 
 
 ###
@@ -25,10 +25,10 @@ GET http://localhost:3000/todos/?category=LEARNING&priority=HIGH
 GET http://localhost:3000/todos/?search_q=Buy
 
 ###
-GET http://localhost:3000/todos/5
+GET http://localhost:3000/todos/6
 
 ###
-GET http://localhost:3000/agenda/?date=2021-02-22
+GET http://localhost:3000/agenda/?date=2021-2-22
 
 ###
 POST http://localhost:3000/todos/ 
@@ -40,7 +40,7 @@ Content-Type:  application/json
   "priority": "LOW",
   "status": "TO DO",
   "category": "HOME",
-  "dueDate": "2021-32-22"
+  "dueDate": "2021-2-22"
 }
 
 ###
@@ -63,4 +63,4 @@ Content-Type: application/json
 
 ###
 
-DELETE http://localhost:3000/todos/4
+DELETE http://localhost:3000/todos/6

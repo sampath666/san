@@ -2,12 +2,34 @@ const express = require("express");
 const path = require("path");
 const { open } = require("sqlite");
 const sqlite3 = require("sqlite3");
-const { format } = require("date-fns");
+const { format, isValid } = require("date-fns");
 
 const app = express();
 app.use(express.json());
 let database = null;
 const dbPath = path.join(__dirname, "todoApplication.db");
+
+const arrObject = (jsObject) => {
+  return {
+    id: jsObject.id,
+    todo: jsObject.todo,
+    priority: jsObject.priority,
+    category: jsObject.category,
+    status: jsObject.status,
+    dueDate: jsObject.due_date,
+  };
+};
+
+const arrObject2 = (jsObject) => {
+  return {
+    id: jsObject.id,
+    todo: jsObject.todo,
+    priority: jsObject.priority,
+    status: jsObject.status,
+    category: jsObject.category,
+    dueDate: jsObject.due_date,
+  };
+};
 const intilizedbandserver = async () => {
   try {
     database = await open({
@@ -23,6 +45,7 @@ const intilizedbandserver = async () => {
   }
 };
 //category=WORK&status=DONE
+
 const hasPriorityAndStatuePropertyAndCategory = (requestQuery) => {
   return (
     requestQuery.priority !== undefined &&
@@ -64,7 +87,7 @@ const hasCategoryProperty = (requestQuery) => {
 intilizedbandserver();
 
 const Authorization = (request, response, next) => {
-  const { priority, status, category } = request.query;
+  const { priority, status, category, dueDate } = request.query;
   //console.log(`priority ${priority},status ${status} and category ${category}`);
   let check = true;
   priorityList = ["HIGH", "MEDIUM", "LOW"];
@@ -93,21 +116,78 @@ const Authorization = (request, response, next) => {
       response.send("Invalid Todo Category");
     }
   }
-
+  if (dueDate !== undefined) {
+    try {
+      const r1 = format(new Date(dueDate), "yyyy-MM-dd");
+      console.log(r1);
+    } catch (e) {
+      console.log(e.message);
+      check = false;
+      response.status(400);
+      response.send("Invalid Due Date");
+      check = false;
+    }
+  }
+  //console.log(request.query.dueDate);
+  // request.query.dueDate = "hello";
   //console.log(check);
   if (check === true) {
     next();
   }
 };
+const authValidDueDateQuery = (request, response, next) => {
+  const { dueDate } = request.query;
+  // console.log(dueDate);
 
-app.get("/todos/", Authorization, async (request, response) => {
-  let data = null;
-  let getTodosQuery = "";
-  const { search_q = "", priority, status, category } = request.query;
+  //console.log("1");
+  if (dueDate !== undefined) {
+    let result = isValid(new Date(dueDate));
+    console.log(result);
+    if (result === true) {
+      const r1 = format(new Date(date), "yyyy-MM-dd");
+      request.query.dueDate = r1;
+      next();
+    } else {
+      response.status(400);
+      response.send("Invalid Due Date");
+    }
+  } else {
+    next();
+  }
+};
+const authValidDateQuery = (request, response, next) => {
+  const { date } = request.query;
+  console.log(date);
 
-  switch (true) {
-    case hasPriorityAndStatuePropertyAndCategory(request.query):
-      getTodosQuery = `
+  console.log("1");
+  if (date !== undefined) {
+    let result = isValid(new Date(date));
+    console.log(result);
+    if (result === true) {
+      next();
+    } else {
+      response.status(400);
+      response.send("Invalid Due Date");
+    }
+  } else {
+    console.log("e");
+    response.status(400);
+    response.send("Invalid Due Date");
+  }
+};
+
+app.get(
+  "/todos/",
+  Authorization,
+  authValidDueDateQuery,
+  async (request, response) => {
+    let data = null;
+    let getTodosQuery = "";
+    const { search_q = "", priority, status, category } = request.query;
+    console.log(request.query.dueDate);
+    switch (true) {
+      case hasPriorityAndStatuePropertyAndCategory(request.query):
+        getTodosQuery = `
         SELECT
             *
         FROM
@@ -117,10 +197,10 @@ app.get("/todos/", Authorization, async (request, response) => {
             AND status = '${status}'
             AND priority = '${priority}'
             AND category = '${category}';`;
-      //  console.log("1");
-      break;
-    case hasPriorityAndCategoryProperty(request.query):
-      getTodosQuery = `
+        //  console.log("1");
+        break;
+      case hasPriorityAndCategoryProperty(request.query):
+        getTodosQuery = `
             SELECT
                 *
             FROM
@@ -129,10 +209,10 @@ app.get("/todos/", Authorization, async (request, response) => {
                 todo LIKE '%${search_q}%'
                 AND category = '${category}'
                 AND priority = '${priority}';`;
-      //    console.log("2");
-      break;
-    case hasCategoryAndStatueProperty(request.query):
-      getTodosQuery = `
+        //    console.log("2");
+        break;
+      case hasCategoryAndStatueProperty(request.query):
+        getTodosQuery = `
             SELECT
                 *
             FROM
@@ -141,10 +221,10 @@ app.get("/todos/", Authorization, async (request, response) => {
                 todo LIKE '%${search_q}%'
                 AND status = '${status}'
                 AND category = '${category}';`;
-      // console.log("3");
-      break;
-    case hasPriorityAndStatueProperty(request.query):
-      getTodosQuery = `
+        // console.log("3");
+        break;
+      case hasPriorityAndStatueProperty(request.query):
+        getTodosQuery = `
       SELECT
         *
       FROM
@@ -153,11 +233,11 @@ app.get("/todos/", Authorization, async (request, response) => {
         todo LIKE '%${search_q}%'
         AND status = '${status}'
         AND priority = '${priority}';`;
-      //   console.log("4");
-      break;
+        //   console.log("4");
+        break;
 
-    case hasPriorityProperty(request.query):
-      getTodosQuery = `
+      case hasPriorityProperty(request.query):
+        getTodosQuery = `
       SELECT
         *
       FROM
@@ -165,10 +245,10 @@ app.get("/todos/", Authorization, async (request, response) => {
       WHERE
         todo LIKE '%${search_q}%'
         AND priority = '${priority}';`;
-      //   console.log("5");
-      break;
-    case hasStatusProperty(request.query):
-      getTodosQuery = `
+        //   console.log("5");
+        break;
+      case hasStatusProperty(request.query):
+        getTodosQuery = `
       SELECT
         *
       FROM
@@ -176,10 +256,10 @@ app.get("/todos/", Authorization, async (request, response) => {
       WHERE
         todo LIKE '%${search_q}%'
         AND status = '${status}';`;
-      //    console.log("6");
-      break;
-    case hasCategoryProperty(request.query):
-      getTodosQuery = `
+        //    console.log("6");
+        break;
+      case hasCategoryProperty(request.query):
+        getTodosQuery = `
       SELECT
         *
       FROM
@@ -187,24 +267,25 @@ app.get("/todos/", Authorization, async (request, response) => {
       WHERE
         todo LIKE '%${search_q}%'
         AND category = '${category}';`;
-      //  console.log(category);
-      //    console.log("7");
-      break;
-    default:
-      getTodosQuery = `
+        //  console.log(category);
+        //    console.log("7");
+        break;
+      default:
+        getTodosQuery = `
       SELECT
         *
       FROM
         todo 
       WHERE
         todo LIKE '%${search_q}%';`;
-      //  console.log("8");
-      break;
-  }
+        //  console.log("8");
+        break;
+    }
 
-  data = await database.all(getTodosQuery);
-  response.send(data);
-});
+    data = await database.all(getTodosQuery);
+    response.send(data.map((eachObject) => arrObject(eachObject)));
+  }
+);
 
 app.get("/todos/:todoId/", async (request, response) => {
   const { todoId } = request.params;
@@ -217,13 +298,14 @@ app.get("/todos/:todoId/", async (request, response) => {
     WHERE
       id = ${todoId};`;
   const todo = await database.get(getTodoQuery);
-  response.send(todo);
+  response.send(arrObject(todo));
 });
 
-app.get("/agenda/", async (request, response) => {
+app.get("/agenda/", authValidDateQuery, async (request, response) => {
   const { date } = request.query;
   const r1 = format(new Date(date), "yyyy-MM-dd");
-  //console.log(r1);
+  //  const r1 = date;
+  console.log(r1);
   getTodosDateQuery = `
       SELECT
         *
@@ -232,7 +314,7 @@ app.get("/agenda/", async (request, response) => {
       WHERE
         due_date = '${r1}';`;
   const todo = await database.all(getTodosDateQuery);
-  response.send(todo);
+  response.send(todo.map((each) => arrObject2(each)));
 });
 
 const AuthorizationBody = (request, response, next) => {
@@ -269,14 +351,13 @@ const AuthorizationBody = (request, response, next) => {
   //console.log(check);
   //console.log(dueDate);
   if (dueDate !== undefined) {
-    try {
+    if (isValid(new Date(dueDate)) === true) {
       const r1 = format(new Date(dueDate), "yyyy-MM-dd");
       console.log(r1);
-    } catch (e) {
-      console.log(e.message);
-      check = false;
+    } else {
       response.status(400);
       response.send("Invalid Due Date");
+      check = false;
     }
   }
   //console.log(check);
@@ -287,11 +368,13 @@ const AuthorizationBody = (request, response, next) => {
 
 app.post("/todos/", AuthorizationBody, async (request, response) => {
   const { id, todo, priority, status, category, dueDate } = request.body;
+  const r1 = format(new Date(dueDate), "yyyy-MM-dd");
+  console.log(r1);
   const postTodoQuery = `
   INSERT INTO
     todo (id, todo, priority, status , category , due_date)
   VALUES
-    (${id}, '${todo}', '${priority}', '${status}','${category}','${dueDate}');`;
+    (${id}, '${todo}', '${priority}', '${status}','${category}','${r1}');`;
   await database.run(postTodoQuery);
   response.send("Todo Successfully Added");
 });
